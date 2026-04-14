@@ -54,7 +54,7 @@ class QueryOrchestrator:
             "role": user.role,
             "hierarchy_code": user.hierarchy_code,
         })
-        self.cube = CubeClient(self._cube_token)
+        self.cube = CubeClient(api_secret=self._cube_token)
 
     def execute(
         self,

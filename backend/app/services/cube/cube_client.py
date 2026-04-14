@@ -34,8 +34,9 @@ load_dotenv()
 # CONFIGURATION
 # =============================================================================
 
-CUBE_API_URL = os.getenv("CUBE_API_URL", "http://localhost:4000/cubejs-api/v1")
-CUBE_API_SECRET = os.getenv("CUBE_API_SECRET", "")
+_cubejs_base = os.getenv("CUBEJS_URL", os.getenv("CUBE_API_URL", "http://localhost:4000"))
+CUBE_API_URL = _cubejs_base.rstrip("/") + "/cubejs-api/v1"
+CUBE_API_SECRET = os.getenv("CUBEJS_API_SECRET", os.getenv("CUBE_API_SECRET", ""))
 
 # Execution guardrails
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("CUBE_REQUEST_TIMEOUT", "30.0"))

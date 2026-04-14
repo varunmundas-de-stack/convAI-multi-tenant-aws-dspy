@@ -31,7 +31,7 @@ def get_dashboard(user: AuthUser, period: str = "last_30_days"):
     """
     rls_filters = RowLevelSecurity.get_cube_filters(user)
     token = _cube_token(user)
-    client = CubeClient(token)
+    client = CubeClient(api_secret=token)
 
     # ── KPI summary ───────────────────────────────────────────────────────
     kpi_query = {
