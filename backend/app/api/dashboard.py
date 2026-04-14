@@ -23,6 +23,11 @@ def _cube_token(user: AuthUser) -> str:
     })
 
 
+def _cubejs_date_range(period: str) -> str:
+    """Convert underscore-separated period strings to Cube.js date range format."""
+    return period.replace("_", " ")
+
+
 @router.get("")
 def get_dashboard(user: AuthUser, period: str = "last_30_days"):
     """
@@ -32,6 +37,7 @@ def get_dashboard(user: AuthUser, period: str = "last_30_days"):
     rls_filters = RowLevelSecurity.get_cube_filters(user)
     token = _cube_token(user)
     client = CubeClient(api_secret=token)
+    date_range = _cubejs_date_range(period)
 
     # ── KPI summary ───────────────────────────────────────────────────────
     kpi_query = {
@@ -41,7 +47,7 @@ def get_dashboard(user: AuthUser, period: str = "last_30_days"):
             "FactSecondarySales.invoiceCount",
             "FactSecondarySales.avgSellingPrice",
         ],
-        "timeDimensions": [{"dimension": "FactSecondarySales.invoiceDate", "dateRange": period}],
+        "timeDimensions": [{"dimension": "FactSecondarySales.invoiceDate", "dateRange": date_range}],
         "filters": rls_filters,
     }
 
@@ -50,7 +56,7 @@ def get_dashboard(user: AuthUser, period: str = "last_30_days"):
         "measures": ["FactSecondarySales.totalNetValue"],
         "timeDimensions": [{
             "dimension": "FactSecondarySales.invoiceDate",
-            "dateRange": period,
+            "dateRange": date_range,
             "granularity": "week",
         }],
         "filters": rls_filters,
@@ -61,7 +67,7 @@ def get_dashboard(user: AuthUser, period: str = "last_30_days"):
     top_brands_query = {
         "measures": ["FactSecondarySales.totalNetValue"],
         "dimensions": ["DimProduct.brandName"],
-        "timeDimensions": [{"dimension": "FactSecondarySales.invoiceDate", "dateRange": period}],
+        "timeDimensions": [{"dimension": "FactSecondarySales.invoiceDate", "dateRange": date_range}],
         "filters": rls_filters,
         "order": {"FactSecondarySales.totalNetValue": "desc"},
         "limit": 5,
