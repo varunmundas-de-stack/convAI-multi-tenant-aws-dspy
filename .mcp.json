@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "cpg-analytics": {
+      "command": "python",
+      "args": ["mcp/server.py"],
+      "env": {
+        "CPG_BASE_URL": "http://localhost:8000",
+        "CPG_EC2_HOST": "32.192.99.187",
+        "CPG_PEM_KEY":  "C:/ProgramData/projects/convAI-multi-tenant-aws/cpg-sales-key.pem"
+      }
+    }
+  }
+}
