@@ -167,6 +167,9 @@ class IntentAdapter:
                 cube_d = DIM_TO_CUBE_DIM.get(name)
                 if cube_d:
                     dims.append(cube_d)
+                elif "." in name:
+                    # Already a fully-qualified Cube.js dimension (e.g. DimProduct.brandName)
+                    dims.append(name)
                 else:
                     logger.warning("Unknown dimension '%s' — skipping", name)
         return dims
