@@ -102,6 +102,10 @@ class QueryOrchestrator:
         insights = InsightEngine().generate(data_rows, intent_result)
         visual_spec = VisualSpecGenerator().generate(data_rows, intent_result)
 
+        # Serialize Pydantic models to dicts for JSON caching
+        insights_dict = insights.model_dump() if hasattr(insights, "model_dump") else (insights.dict() if hasattr(insights, "dict") else insights)
+        visual_spec_dict = visual_spec.model_dump() if hasattr(visual_spec, "model_dump") else (visual_spec.dict() if hasattr(visual_spec, "dict") else visual_spec)
+
         # Step 7: Update QCO for next turn
         if session_id:
             updated_qco = self._update_qco(qco, question, intent_result, data_rows)
@@ -117,8 +121,8 @@ class QueryOrchestrator:
             "cube_query": cube_query,
             "data": data_rows,
             "row_count": len(data_rows),
-            "insights": insights,
-            "visual_spec": visual_spec,
+            "insights": insights_dict,
+            "visual_spec": visual_spec_dict,
             "execution_time_ms": elapsed_ms,
             "domain": self.domain,
             "stage": "COMPLETED",
@@ -151,6 +155,8 @@ class QueryOrchestrator:
         data_rows = cube_resp.data
         insights = InsightEngine().generate(data_rows, saved_intent)
         visual_spec = VisualSpecGenerator().generate(data_rows, saved_intent)
+        insights_dict = insights.model_dump() if hasattr(insights, "model_dump") else (insights.dict() if hasattr(insights, "dict") else insights)
+        visual_spec_dict = visual_spec.model_dump() if hasattr(visual_spec, "model_dump") else (visual_spec.dict() if hasattr(visual_spec, "dict") else visual_spec)
 
         if session_id:
             qco = load_qco(session_id)
@@ -164,8 +170,8 @@ class QueryOrchestrator:
             "request_id": request_id,
             "data": data_rows,
             "row_count": len(data_rows),
-            "insights": insights,
-            "visual_spec": visual_spec,
+            "insights": insights_dict,
+            "visual_spec": visual_spec_dict,
             "stage": "COMPLETED",
             "resumed_from_clarification": True,
         }
