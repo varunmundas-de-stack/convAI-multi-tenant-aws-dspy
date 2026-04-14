@@ -190,40 +190,57 @@ class QueryOrchestrator:
         Import here to keep startup fast and allow lazy DSPy LM configuration.
         """
         try:
-            from app.dspy_pipeline.pipeline import DSPyPipeline
-            from app.dspy_pipeline.config import configure_dspy
+            from app.dspy_pipeline.pipeline import IntentExtractionPipeline
+            from app.dspy_pipeline.config import configure_dspy_model, get_dspy_pipeline
+            from app.dspy_pipeline.clarification_tool import ClarificationRequired
+            from datetime import date as _date
 
-            configure_dspy()
-            pipeline = DSPyPipeline(
-                client_id=self.client_id,
-                domain=self.domain,
-            )
-            result = pipeline.run(
-                question=question,
-                session_context=qco or {},
+            configure_dspy_model()
+            pipeline = get_dspy_pipeline()
+            result = pipeline.forward(
+                query=question,
+                current_date=_date.today(),
+                previous_context=qco or {},
                 request_id=request_id,
             )
 
-            # Check if pipeline requested clarification
-            if hasattr(result, "stage") and str(result.stage) == "CLARIFICATION_REQUESTED":
-                # Save state for resumption
+            # Check for clarification result (dict with CLARIFICATION_REQUESTED stage)
+            if isinstance(result, dict) and result.get("stage") == "CLARIFICATION_REQUESTED":
                 save_pipeline_state(request_id, {
-                    "intent_snapshot": result.intent if hasattr(result, "intent") else {},
+                    "intent_snapshot": result.get("intent", {}),
                     "original_question": question,
-                    "missing_fields": getattr(result, "missing_fields", []),
-                    "message": getattr(result, "message", ""),
+                    "missing_fields": result.get("missing_fields", []),
+                    "message": result.get("message", ""),
                     "domain": self.domain,
                 })
                 raise _ClarificationHalt(
                     request_id=request_id,
-                    missing_fields=getattr(result, "missing_fields", []),
-                    message=getattr(result, "message", "Please clarify your question"),
+                    missing_fields=result.get("missing_fields", []),
+                    message=result.get("message", "Please clarify your question"),
                 )
 
-            return result.intent if hasattr(result, "intent") else result
+            # Return Intent as dict
+            if hasattr(result, "model_dump"):
+                return result.model_dump()
+            elif hasattr(result, "dict"):
+                return result.dict()
+            return result
 
         except _ClarificationHalt:
             raise
+        except ClarificationRequired as cr:
+            save_pipeline_state(request_id, {
+                "intent_snapshot": {},
+                "original_question": question,
+                "missing_fields": getattr(cr, "missing_fields", []),
+                "message": getattr(cr, "message", "Please clarify your question"),
+                "domain": self.domain,
+            })
+            raise _ClarificationHalt(
+                request_id=request_id,
+                missing_fields=getattr(cr, "missing_fields", []),
+                message=getattr(cr, "message", "Please clarify your question"),
+            )
         except ImportError:
             # DSPy not configured (dev/test) — return minimal fallback intent
             logger.warning("DSPy pipeline not available, using fallback intent")
