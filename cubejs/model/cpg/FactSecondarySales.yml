@@ -3,7 +3,7 @@
 
 cubes:
   - name: FactSecondarySales
-    sql_table: "cpg_{{ COMPILE_CONTEXT.securityContext.clientId }}.fact_secondary_sales"
+    sql_table: cpg_{{ COMPILE_CONTEXT.securityContext.clientId }}.fact_secondary_sales
 
     measures:
       - name: totalNetValue
