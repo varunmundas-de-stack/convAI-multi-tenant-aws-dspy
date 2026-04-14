@@ -64,6 +64,14 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Insights engine failed to start (non-fatal): %s", exc)
 
+    # RLHF database init
+    try:
+        from app.rlhf.db import init_db
+        init_db()
+        logger.info("RLHF database initialized")
+    except Exception as exc:
+        logger.warning("RLHF database init failed (non-fatal): %s", exc)
+
     # RLHF scheduler
     try:
         from app.rlhf.scheduler import run_refinement_cycle
