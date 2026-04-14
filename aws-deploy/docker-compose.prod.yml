@@ -55,8 +55,8 @@ services:
       CUBEJS_LOG_LEVEL: error
       NODE_ENV: production
     volumes:
-      - ./cubejs/model:/cube/conf/model:ro
-      - ./cubejs/cube.js:/cube/conf/cube.js:ro
+      - ../cubejs/model:/cube/conf/model:ro
+      - ../cubejs/cube.js:/cube/conf/cube.js:ro
     depends_on:
       postgres:
         condition: service_healthy
