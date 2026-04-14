@@ -985,3 +985,16 @@ def _format_number(value: float) -> str:
         return f"{value:,.2f}"
     else:
         return f"{int(value):,}"
+
+
+# =============================================================================
+# Compatibility shim — query_orchestrator imports VisualSpecGenerator as a class
+# =============================================================================
+
+class VisualSpecGenerator:
+    """Thin wrapper: accepts (data, intent) and produces a VisualSpec."""
+
+    def generate(self, data: list, intent, **kwargs):
+        from app.services.insights.insight_engine import generate_insights
+        insights = generate_insights(data=data, intent=intent)
+        return generate_visual_spec(data=data, insights=insights, intent=intent, **kwargs)

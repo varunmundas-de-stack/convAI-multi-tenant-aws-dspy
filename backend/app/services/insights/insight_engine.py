@@ -1326,3 +1326,29 @@ def _format_label(key: str) -> str:
     if "." in key:
         key = key.split(".")[-1]
     return key.replace("_", " ").title()
+
+
+# =============================================================================
+# Compatibility shim — query_orchestrator imports InsightEngine as a class
+# =============================================================================
+
+class InsightEngine:
+    """Thin wrapper around the module-level generate_insights function."""
+
+    def generate(
+        self,
+        data: list,
+        intent,
+        previous_qco=None,
+        baseline_data=None,
+        strategy=None,
+        comparison_data=None,
+    ):
+        return generate_insights(
+            data=data,
+            intent=intent,
+            previous_qco=previous_qco,
+            baseline_data=baseline_data,
+            strategy=strategy,
+            comparison_data=comparison_data,
+        )
