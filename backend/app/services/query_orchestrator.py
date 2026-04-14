@@ -242,24 +242,76 @@ class QueryOrchestrator:
                 message=getattr(cr, "message", "Please clarify your question"),
             )
         except ImportError:
-            # DSPy not configured (dev/test) — return minimal fallback intent
-            logger.warning("DSPy pipeline not available, using fallback intent")
+            logger.warning("DSPy pipeline not available (ImportError), using fallback intent")
+            return self._fallback_intent(question)
+        except Exception as exc:
+            logger.warning("DSPy pipeline failed (%s: %s), using fallback intent", type(exc).__name__, exc)
             return self._fallback_intent(question)
 
     def _fallback_intent(self, question: str) -> dict:
-        """Minimal keyword-based fallback when DSPy is not configured."""
+        """Keyword-based fallback when DSPy pipeline is unavailable or fails."""
+        import re
         q = question.lower()
+
+        # Metric
         metric = "secondary_sales_value"
-        if "volume" in q or "units" in q:
+        if any(k in q for k in ("volume", "units", "quantity", "cases")):
             metric = "secondary_sales_volume"
         elif "discount" in q:
             metric = "discount_amount"
         elif "margin" in q:
             metric = "margin_amount"
+        elif any(k in q for k in ("gross", "gross value")):
+            metric = "gross_sales_value"
+
+        # Time window — look for common patterns
+        time_window = "last_365_days"
+        granularity = "month"
+        if any(k in q for k in ("last month", "previous month", "past month")):
+            time_window = "last month"
+        elif any(k in q for k in ("this month", "current month", "mtd", "month to date")):
+            time_window = "this month"
+        elif any(k in q for k in ("last quarter", "previous quarter")):
+            time_window = "last quarter"
+            granularity = "week"
+        elif any(k in q for k in ("this quarter", "current quarter", "qtd")):
+            time_window = "this quarter"
+            granularity = "week"
+        elif any(k in q for k in ("last year", "previous year")):
+            time_window = "last year"
+        elif any(k in q for k in ("this year", "current year", "ytd", "year to date")):
+            time_window = "this year"
+        elif any(k in q for k in ("last 30", "past 30", "30 days")):
+            time_window = "last 30 days"
+        elif any(k in q for k in ("last 90", "past 90", "90 days", "3 months")):
+            time_window = "last 90 days"
+        elif any(k in q for k in ("last 6 months", "6 months", "half year")):
+            time_window = "last 6 months"
+        elif re.search(r'\bin 20\d\d\b', q):
+            yr = re.search(r'\b(20\d\d)\b', q).group(1)
+            time_window = f"from {yr}-01-01 to {yr}-12-31"
+        elif any(k in q for k in ("trend", "weekly", "week by week")):
+            granularity = "week"
+
+        # Group by / dimensions
+        group_by = []
+        if "brand" in q:
+            group_by.append("DimProduct.brandName")
+        if "category" in q or "categories" in q:
+            group_by.append("DimProduct.categoryName")
+        if any(k in q for k in ("zone", "region")):
+            group_by.append("DimGeography.zoneName")
+        if any(k in q for k in ("state", "states")):
+            group_by.append("DimGeography.stateName")
+        if any(k in q for k in ("channel", "channels")):
+            group_by.append("DimChannel.channelName")
+        if any(k in q for k in ("so", "sales officer", "outlet")):
+            group_by.append("DimSalesHierarchy.soCode")
+
         return {
             "metrics": [metric],
-            "group_by": [],
-            "time_context": {"time_window": "last_30_days", "granularity": "month"},
+            "group_by": group_by,
+            "time_context": {"time_window": time_window, "granularity": granularity},
             "filters": [],
         }
 
