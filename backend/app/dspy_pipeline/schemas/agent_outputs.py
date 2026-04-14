@@ -11,21 +11,38 @@ from app.dspy_pipeline.schemas.catalog import TIME_WINDOWS
 
 class SubQueryItem(BaseModel):
     """Represents a decomposed sub-query."""
-    index: int = Field(description="Position in original compound query")
-    text: str = Field(description="Isolated sub-query text")
+    index: int = Field(default=0, description="Position in original compound query")
+    text: str = Field(default="", description="Isolated sub-query text")
     intent_hint: Optional[str] = Field(default=None, description="Suggested intent type")
     dependencies: List[int] = Field(default_factory=list, description="Indices of sub-queries this depends on")
 
-    model_config = ConfigDict(extra="forbid")
+    # Allow LLM to return alternate field names without breaking validation
+    model_config = ConfigDict(extra="ignore")
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_llm_fields(cls, data: Any) -> Any:
+        """Accept alternate field names that LLMs commonly produce."""
+        if isinstance(data, dict):
+            # LLM often uses query_id instead of index
+            if "index" not in data and "query_id" in data:
+                data["index"] = data["query_id"]
+            # LLM often uses description or original_query instead of text
+            if "text" not in data or not data.get("text"):
+                for alt in ("description", "original_query", "query"):
+                    if alt in data and data[alt]:
+                        data["text"] = data[alt]
+                        break
+        return data
 
 
 class DecomposedQuery(BaseModel):
     """Output of QueryDecomposerModule."""
-    original_query: str
+    original_query: str = Field(default="")
     sub_queries: List[SubQueryItem]
     is_compound: bool = Field(description="True if query was split, False if single query")
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 # =============================================================================
