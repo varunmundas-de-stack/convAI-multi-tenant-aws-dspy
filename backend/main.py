@@ -49,8 +49,8 @@ async def lifespan(app: FastAPI):
 
     # Configure DSPy LM (lazy — first call initialises)
     try:
-        from app.dspy_pipeline.config import configure_dspy
-        configure_dspy()
+        from app.dspy_pipeline.config import configure_dspy_model
+        configure_dspy_model()
         logger.info("DSPy pipeline configured")
     except Exception as exc:
         logger.warning("DSPy configuration failed (non-fatal): %s", exc)
@@ -66,9 +66,8 @@ async def lifespan(app: FastAPI):
 
     # RLHF scheduler
     try:
-        from app.rlhf.scheduler import start_scheduler
-        start_scheduler()
-        logger.info("RLHF scheduler started")
+        from app.rlhf.scheduler import run_refinement_cycle
+        logger.info("RLHF scheduler ready (on-demand via /rlhf endpoints)")
     except Exception as exc:
         logger.warning("RLHF scheduler failed to start (non-fatal): %s", exc)
 
