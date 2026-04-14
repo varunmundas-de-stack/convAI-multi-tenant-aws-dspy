@@ -142,7 +142,7 @@ export async function fetchInsightCount()        { return apiClient.get("/insigh
 export async function markInsightRead(id)        { return apiClient.post(`/insights/${id}/read`, {}) }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-export async function fetchDashboard(period = "last_30_days") {
+export async function fetchDashboard(period = "last_365_days") {
   return apiClient.get(`/dashboard?period=${period}`)
 }
 

@@ -29,7 +29,7 @@ def _cubejs_date_range(period: str) -> str:
 
 
 @router.get("")
-def get_dashboard(user: AuthUser, period: str = "last_30_days"):
+def get_dashboard(user: AuthUser, period: str = "last_365_days"):
     """
     Returns KPI cards + sales trend + top brands for the authenticated user's scope.
     All Cube queries have RLS filters injected.
