@@ -99,11 +99,12 @@ app.add_middleware(
 )
 
 # ── API routers ───────────────────────────────────────────────────────────────
-app.include_router(auth.router,      prefix="/auth")
-app.include_router(query.router,     prefix="/query")
-app.include_router(insights.router,  prefix="/insights")
-app.include_router(dashboard.router, prefix="/dashboard")
-app.include_router(admin.router,     prefix="/admin")
+# Note: each router already defines its own prefix — do NOT add prefix here
+app.include_router(auth.router)
+app.include_router(query.router)
+app.include_router(insights.router)
+app.include_router(dashboard.router)
+app.include_router(admin.router)
 app.include_router(rlhf_router,      prefix="/rlhf")
 
 
