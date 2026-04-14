@@ -1,0 +1,115 @@
+version: "3.9"
+
+# Development compose — all services on one machine
+# Production: use aws-deploy/docker-compose.prod.yml
+
+services:
+
+  # ── PostgreSQL (analytics + auth) ─────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: cpg_dspy_postgres
+    environment:
+      POSTGRES_DB: cpg_analytics
+      POSTGRES_USER: cpg_user
+      POSTGRES_PASSWORD: cpg_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cpg_user -d cpg_analytics"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  # ── Redis (QCO + pipeline state) ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: cpg_dspy_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Cube.js (OLAP analytics layer) ────────────────────────────────────────
+  cubejs:
+    image: cubejs/cube:latest
+    container_name: cpg_dspy_cubejs
+    ports:
+      - "4000:4000"
+    environment:
+      CUBEJS_DEV_MODE: "true"
+      CUBEJS_DB_TYPE: postgres
+      CUBEJS_DB_HOST: postgres
+      CUBEJS_DB_PORT: "5432"
+      CUBEJS_DB_NAME: cpg_analytics
+      CUBEJS_DB_USER: cpg_user
+      CUBEJS_DB_PASS: cpg_password
+      CUBEJS_API_SECRET: "cpg-cubejs-dev-secret"
+      CUBEJS_LOG_LEVEL: warn
+      CUBEJS_CACHE_MODE: no-cache
+      NODE_ENV: development
+    volumes:
+      - ./cubejs/model:/cube/conf/model:ro
+      - ./cubejs/cube.js:/cube/conf/cube.js:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── FastAPI app ────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cpg_dspy_app
+    ports:
+      - "8000:8000"
+    environment:
+      # PostgreSQL
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: cpg_analytics
+      POSTGRES_USER: cpg_user
+      POSTGRES_PASSWORD: cpg_password
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # Cube.js
+      CUBEJS_URL: http://cubejs:4000
+      CUBEJS_API_SECRET: "cpg-cubejs-dev-secret"
+      # Anthropic — required for DSPy + RLHF
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      CLAUDE_MODEL: "claude-haiku-4-5-20251001"
+      # JWT
+      JWT_SECRET_KEY: "change-me-dev-only"
+      # App
+      DEBUG: "true"
+      RLHF_DB_PATH: /app/data/rlhf.db
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      cubejs:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  pg_data:
+  redis_data:
+  app_data:

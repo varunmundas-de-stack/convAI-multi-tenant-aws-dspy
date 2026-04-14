@@ -1,0 +1,234 @@
+# Nestlé CPG Catalog — DSPy-compatible metrics/dimensions/time_windows
+# Used by: CatalogManager, DSPy agents (context injection), IntentAdapter
+
+domain: cpg
+client_id: itc
+client_name: "ITC Limited"
+schema: cpg_itc
+fact_table: fact_secondary_sales
+time_column: invoice_date
+
+metrics:
+  - name: secondary_sales_value
+    description: "Net invoice value — primary revenue metric for secondary sales"
+    cube_measure: FactSecondarySales.totalNetValue
+    aggregation: SUM
+    format: currency_inr
+    synonyms: [revenue, sales, turnover, net sales, billing, invoice value, NSV]
+
+  - name: secondary_sales_volume
+    description: "Total units/cases sold in secondary sales"
+    cube_measure: FactSecondarySales.totalQuantity
+    aggregation: SUM
+    format: number
+    synonyms: [volume, units, quantity, cases, packs, offtake]
+
+  - name: gross_sales_value
+    description: "Gross invoice value before discounts"
+    cube_measure: FactSecondarySales.grossSalesValue
+    aggregation: SUM
+    format: currency_inr
+    synonyms: [gross sales, GSV, gross billing]
+
+  - name: discount_amount
+    description: "Total trade discount and scheme payouts"
+    cube_measure: FactSecondarySales.totalDiscount
+    aggregation: SUM
+    format: currency_inr
+    synonyms: [discount, rebate, scheme, trade spend]
+
+  - name: margin_amount
+    description: "Gross contribution margin"
+    cube_measure: FactSecondarySales.totalMargin
+    aggregation: SUM
+    format: currency_inr
+    synonyms: [margin, profit, contribution, gross profit]
+
+  - name: invoice_count
+    description: "Number of invoices raised"
+    cube_measure: FactSecondarySales.invoiceCount
+    aggregation: COUNT
+    format: number
+    synonyms: [invoices, bills, orders, transactions]
+
+  - name: avg_selling_price
+    description: "Average per-unit selling price"
+    cube_measure: FactSecondarySales.avgSellingPrice
+    aggregation: AVG
+    format: currency_inr
+    synonyms: [ASP, average price, price per unit]
+
+  - name: return_value
+    description: "Value of goods returned by distributors"
+    cube_measure: FactSecondarySales.returnValue
+    aggregation: SUM
+    format: currency_inr
+    synonyms: [returns, goods returned, return sales]
+
+  - name: active_outlets
+    description: "Count of unique outlets billed in the period"
+    cube_measure: FactSecondarySales.activeOutlets
+    aggregation: COUNT_DISTINCT
+    format: number
+    synonyms: [outlets, retailers, active retailers, unique outlets, coverage]
+
+dimensions:
+  - name: brand_name
+    description: "Product brand (e.g. Aashirvaad, Sunfeast, Yippee)"
+    cube_dimension: DimProduct.brandName
+    table: dim_product
+    groupable: true
+    filterable: true
+    synonyms: [brand, brand name, product brand]
+
+  - name: category_name
+    description: "Product category (e.g. Noodles, Chocolates, Beverages)"
+    cube_dimension: DimProduct.categoryName
+    table: dim_product
+    groupable: true
+    filterable: true
+    synonyms: [category, product category, segment]
+
+  - name: sku_name
+    description: "Individual SKU / product variant name"
+    cube_dimension: DimProduct.skuName
+    table: dim_product
+    groupable: true
+    filterable: true
+    synonyms: [SKU, product, item, variant]
+
+  - name: pack_size
+    description: "Pack size (e.g. 70g, 200ml)"
+    cube_dimension: DimProduct.packSize
+    table: dim_product
+    groupable: true
+    filterable: true
+    synonyms: [pack, size, grammage, pack type]
+
+  - name: state_name
+    description: "Indian state"
+    cube_dimension: DimGeography.stateName
+    table: dim_geography
+    groupable: true
+    filterable: true
+    synonyms: [state, geography, region state]
+
+  - name: zone_name
+    description: "Sales zone (North/South/East/West)"
+    cube_dimension: DimGeography.zoneName
+    table: dim_geography
+    groupable: true
+    filterable: true
+    synonyms: [zone, sales zone, region]
+
+  - name: district_name
+    description: "District within a state"
+    cube_dimension: DimGeography.districtName
+    table: dim_geography
+    groupable: true
+    filterable: true
+    synonyms: [district, sub-region, area]
+
+  - name: channel_name
+    description: "Sales channel (Modern Trade, General Trade, E-commerce, HoReCa)"
+    cube_dimension: DimChannel.channelName
+    table: dim_channel
+    groupable: true
+    filterable: true
+    synonyms: [channel, trade type, route to market, RTM]
+
+  - name: distributor_name
+    description: "Distributor / stockist name"
+    cube_dimension: DimCustomer.distributorName
+    table: dim_customer
+    groupable: true
+    filterable: true
+    synonyms: [distributor, stockist, C&F]
+
+  - name: outlet_type
+    description: "Type of retail outlet (Kirana, Supermarket, Chemist, etc.)"
+    cube_dimension: DimCustomer.outletType
+    table: dim_customer
+    groupable: true
+    filterable: true
+    synonyms: [outlet, store type, retail type]
+
+  - name: so_code
+    description: "Sales Officer territory code"
+    cube_dimension: DimSalesHierarchy.soCode
+    table: dim_sales_hierarchy
+    groupable: true
+    filterable: true
+    synonyms: [SO, sales officer, territory code]
+
+  - name: asm_code
+    description: "Area Sales Manager code"
+    cube_dimension: DimSalesHierarchy.asmCode
+    table: dim_sales_hierarchy
+    groupable: true
+    filterable: true
+    synonyms: [ASM, area manager]
+
+  - name: zsm_code
+    description: "Zonal Sales Manager code"
+    cube_dimension: DimSalesHierarchy.zsmCode
+    table: dim_sales_hierarchy
+    groupable: true
+    filterable: true
+    synonyms: [ZSM, zonal manager]
+
+  - name: week
+    description: "Calendar week label"
+    cube_dimension: DimDate.weekLabel
+    table: dim_date
+    groupable: true
+    filterable: false
+    synonyms: [week, weekly]
+
+  - name: month
+    description: "Calendar month label"
+    cube_dimension: DimDate.monthLabel
+    table: dim_date
+    groupable: true
+    filterable: false
+    synonyms: [month, monthly]
+
+  - name: quarter
+    description: "Financial quarter (Q1/Q2/Q3/Q4)"
+    cube_dimension: DimDate.quarter
+    table: dim_date
+    groupable: true
+    filterable: true
+    synonyms: [quarter, Q1, Q2, Q3, Q4]
+
+time_windows:
+  - name: last_7_days
+    description: "Last 7 days"
+    synonyms: [this week, past week, last week]
+  - name: last_30_days
+    description: "Last 30 days"
+    synonyms: [this month, past 30 days, last 30 days]
+  - name: last_4_weeks
+    description: "Last 4 weeks"
+    synonyms: [last 4 weeks, past month]
+  - name: last_12_weeks
+    description: "Last 12 weeks / quarter"
+    synonyms: [last 12 weeks, past quarter]
+  - name: this_month
+    description: "Current calendar month"
+    synonyms: [this month, current month, MTD, month to date]
+  - name: last_month
+    description: "Previous calendar month"
+    synonyms: [last month, previous month]
+  - name: this_quarter
+    description: "Current financial quarter"
+    synonyms: [this quarter, current quarter, QTD]
+  - name: last_quarter
+    description: "Previous financial quarter"
+    synonyms: [last quarter, previous quarter, Q1, Q2, Q3, Q4]
+  - name: this_year
+    description: "Current calendar year"
+    synonyms: [this year, YTD, year to date, current year]
+  - name: last_year
+    description: "Previous calendar year"
+    synonyms: [last year, previous year, FY]

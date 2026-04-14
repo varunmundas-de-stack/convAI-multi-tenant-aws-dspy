@@ -1,0 +1,106 @@
+version: "3.9"
+
+# Production compose — AWS EC2 deployment
+# Usage: docker compose -f aws-deploy/docker-compose.prod.yml up -d --build app
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: cpg_dspy_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cpg_analytics}
+      POSTGRES_USER: ${POSTGRES_USER:-cpg_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    # Not exposed externally — accessed only by app container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cpg_user} -d ${POSTGRES_DB:-cpg_analytics}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: cpg_dspy_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  cubejs:
+    image: cubejs/cube:latest
+    container_name: cpg_dspy_cubejs
+    restart: unless-stopped
+    # Bound to localhost only — Nginx/app proxy only
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      CUBEJS_DEV_MODE: "false"
+      CUBEJS_DB_TYPE: postgres
+      CUBEJS_DB_HOST: postgres
+      CUBEJS_DB_PORT: "5432"
+      CUBEJS_DB_NAME: ${POSTGRES_DB:-cpg_analytics}
+      CUBEJS_DB_USER: ${POSTGRES_USER:-cpg_user}
+      CUBEJS_DB_PASS: ${POSTGRES_PASSWORD}
+      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET}
+      CUBEJS_LOG_LEVEL: error
+      NODE_ENV: production
+    volumes:
+      - ./cubejs/model:/cube/conf/model:ro
+      - ./cubejs/cube.js:/cube/conf/cube.js:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: cpg_dspy_app
+    restart: unless-stopped
+    # Bound to localhost only — Nginx proxies externally
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-cpg_analytics}
+      POSTGRES_USER: ${POSTGRES_USER:-cpg_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      CUBEJS_URL: http://cubejs:4000
+      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-haiku-4-5-20251001}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      DEBUG: "false"
+      RLHF_DB_PATH: /app/data/rlhf.db
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  pg_data:
+  redis_data:
+  app_data:

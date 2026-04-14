@@ -1,0 +1,49 @@
+# Environment & secrets
+.env
+*.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Node / React
+frontend_react/node_modules/
+frontend_react/dist/
+frontend_react/.next/
+frontend_react/out/
+
+# Docker volumes (local dev)
+postgres_data/
+redis_data/
+
+# Data / DB files
+*.db
+*.duckdb
+data/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# SSH keys
+*.pem

@@ -1,0 +1,141 @@
+# Dimension cubes — shared across all CPG tenants
+
+cubes:
+  - name: DimProduct
+    sql_table: dim_product
+    dimensions:
+      - name: productKey
+        sql: product_key
+        type: number
+        primary_key: true
+      - name: skuCode
+        sql: sku_code
+        type: string
+      - name: skuName
+        sql: sku_name
+        type: string
+        title: "SKU Name"
+      - name: brandName
+        sql: brand_name
+        type: string
+        title: "Brand"
+      - name: categoryName
+        sql: category_name
+        type: string
+        title: "Category"
+      - name: packSize
+        sql: pack_size
+        type: string
+        title: "Pack Size"
+
+  - name: DimGeography
+    sql_table: dim_geography
+    dimensions:
+      - name: geographyKey
+        sql: geography_key
+        type: number
+        primary_key: true
+      - name: stateName
+        sql: state_name
+        type: string
+        title: "State"
+      - name: zoneName
+        sql: zone_name
+        type: string
+        title: "Zone"
+      - name: districtName
+        sql: district_name
+        type: string
+        title: "District"
+      - name: townName
+        sql: town_name
+        type: string
+        title: "Town"
+
+  - name: DimCustomer
+    sql_table: dim_customer
+    dimensions:
+      - name: customerKey
+        sql: customer_key
+        type: number
+        primary_key: true
+      - name: distributorName
+        sql: distributor_name
+        type: string
+        title: "Distributor"
+      - name: retailerName
+        sql: retailer_name
+        type: string
+        title: "Retailer"
+      - name: outletType
+        sql: outlet_type
+        type: string
+        title: "Outlet Type"
+
+  - name: DimChannel
+    sql_table: dim_channel
+    dimensions:
+      - name: channelKey
+        sql: channel_key
+        type: number
+        primary_key: true
+      - name: channelName
+        sql: channel_name
+        type: string
+        title: "Channel"
+
+  - name: DimSalesHierarchy
+    sql_table: dim_sales_hierarchy
+    dimensions:
+      - name: hierarchyKey
+        sql: hierarchy_key
+        type: number
+        primary_key: true
+      - name: soCode
+        sql: so_code
+        type: string
+        title: "SO Code"
+      - name: asmCode
+        sql: asm_code
+        type: string
+        title: "ASM Code"
+      - name: zsmCode
+        sql: zsm_code
+        type: string
+        title: "ZSM Code"
+      - name: nsmCode
+        sql: nsm_code
+        type: string
+        title: "NSM Code"
+      - name: zoneName
+        sql: zone_name
+        type: string
+        title: "Zone"
+      - name: regionName
+        sql: region_name
+        type: string
+        title: "Region"
+
+  - name: DimDate
+    sql_table: dim_date
+    dimensions:
+      - name: dateKey
+        sql: date_key
+        type: number
+        primary_key: true
+      - name: year
+        sql: year
+        type: number
+        title: "Year"
+      - name: quarter
+        sql: quarter
+        type: number
+        title: "Quarter"
+      - name: monthLabel
+        sql: month_name
+        type: string
+        title: "Month"
+      - name: weekLabel
+        sql: week_label
+        type: string
+        title: "Week"

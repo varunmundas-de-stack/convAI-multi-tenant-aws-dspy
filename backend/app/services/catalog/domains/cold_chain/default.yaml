@@ -1,0 +1,93 @@
+# Cold Chain Domain Catalog — PLACEHOLDER
+# Schema will be populated when the US cold chain client onboards.
+# Drop a client_<id>.yaml file in this folder to activate a tenant.
+#
+# Planned metrics: temperature_excursions, on_time_delivery_pct, compliance_rate,
+#   lot_count, expiry_risk_value, cold_storage_utilization, transport_failures
+# Planned dimensions: facility_name, facility_type, lot_number, product_name,
+#   route_name, carrier_name, temperature_zone, storage_condition
+
+domain: cold_chain
+client_id: default
+client_name: "Cold Chain Default"
+schema: cold_chain_default
+fact_table: fact_cold_chain_events
+time_column: event_date
+status: placeholder
+
+metrics:
+  - name: temperature_excursions
+    description: "Number of temperature out-of-range events"
+    cube_measure: FactColdChain.temperatureExcursions
+    aggregation: COUNT
+    format: number
+    synonyms: [excursions, temp breaches, temperature violations, out of range]
+
+  - name: on_time_delivery_pct
+    description: "Percentage of deliveries on time"
+    cube_measure: FactColdChain.onTimeDeliveryPct
+    aggregation: AVG
+    format: percentage
+    synonyms: [OTD, on time delivery, delivery rate, OTIF]
+
+  - name: compliance_rate
+    description: "Regulatory and SOP compliance rate"
+    cube_measure: FactColdChain.complianceRate
+    aggregation: AVG
+    format: percentage
+    synonyms: [compliance, regulatory compliance, SOP adherence]
+
+  - name: lot_count
+    description: "Number of active lots in the period"
+    cube_measure: FactColdChain.lotCount
+    aggregation: COUNT_DISTINCT
+    format: number
+    synonyms: [lots, batches, batch count, active lots]
+
+dimensions:
+  - name: facility_name
+    description: "Cold storage facility or distribution center name"
+    cube_dimension: DimFacility.facilityName
+    groupable: true
+    filterable: true
+    synonyms: [facility, DC, distribution center, warehouse, cold storage]
+
+  - name: facility_type
+    description: "Type of facility (Cold Storage / DC / Transit Hub)"
+    cube_dimension: DimFacility.facilityType
+    groupable: true
+    filterable: true
+    synonyms: [facility type, storage type]
+
+  - name: lot_number
+    description: "Manufacturing lot / batch number"
+    cube_dimension: DimLot.lotNumber
+    groupable: true
+    filterable: true
+    synonyms: [lot, batch, batch number, lot ID]
+
+  - name: product_name
+    description: "Temperature-sensitive product name (e.g. vaccine, biologic)"
+    cube_dimension: DimColdProduct.productName
+    groupable: true
+    filterable: true
+    synonyms: [product, drug, medicine, vaccine, biologic]
+
+  - name: route_name
+    description: "Distribution route name"
+    cube_dimension: DimRoute.routeName
+    groupable: true
+    filterable: true
+    synonyms: [route, lane, corridor, delivery route]
+
+time_windows:
+  - name: last_7_days
+    description: "Last 7 days"
+  - name: last_30_days
+    description: "Last 30 days"
+  - name: this_month
+    description: "Current calendar month"
+  - name: last_month
+    description: "Previous calendar month"
+  - name: this_quarter
+    description: "Current quarter"
