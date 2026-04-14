@@ -68,16 +68,16 @@ def get_dashboard(user: AuthUser, period: str = "last_30_days"):
     }
 
     try:
-        kpis = client.execute(kpi_query)
-        trend = client.execute(trend_query)
-        top_brands = client.execute(top_brands_query)
+        kpis = client.load(kpi_query)
+        trend = client.load(trend_query)
+        top_brands = client.load(top_brands_query)
     except Exception as exc:
         logger.error("Dashboard Cube.js query failed: %s", exc)
         raise HTTPException(status_code=502, detail="Analytics backend unavailable")
 
     return {
         "period": period,
-        "kpis": kpis.get("data", [{}])[0] if kpis.get("data") else {},
-        "trend": trend.get("data", []),
-        "top_brands": top_brands.get("data", []),
+        "kpis": kpis.data[0] if kpis.data else {},
+        "trend": trend.data,
+        "top_brands": top_brands.data,
     }

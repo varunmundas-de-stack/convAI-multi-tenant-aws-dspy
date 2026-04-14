@@ -186,9 +186,9 @@ async def stop_ab_test():
 
 @router.post("/run-cycle")
 async def trigger_refinement_cycle(
-    version: str = Query(..., description="Baseline version for refinement"),
-    min_ratings: int = Query(50, ge=1),
-    min_improvement: float = Query(0.3, ge=0.0),
+    version: str = Query("v1", description="Baseline version for refinement"),
+    min_ratings: int = Query(10, ge=1),
+    min_improvement: float = Query(0.1, ge=0.0),
 ):
     """Trigger a full refinement cycle with guardrails."""
     result = run_refinement_cycle(version, min_ratings=min_ratings, min_improvement=min_improvement)

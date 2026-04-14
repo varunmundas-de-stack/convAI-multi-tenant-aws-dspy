@@ -91,12 +91,12 @@ class QueryOrchestrator:
 
         # Step 5: Execute Cube.js query
         try:
-            cube_resp = self.cube.execute(cube_query)
+            cube_resp = self.cube.load(cube_query)
         except Exception as exc:
             logger.error("Cube.js execution failed: %s", exc)
             return {"success": False, "error": "Analytics backend unavailable", "cube_query": cube_query}
 
-        data_rows = cube_resp.get("data", [])
+        data_rows = cube_resp.data
 
         # Step 6: Generate insights + VisualSpec
         insights = InsightEngine().generate(data_rows, intent_result)
@@ -144,11 +144,11 @@ class QueryOrchestrator:
         cube_query = RowLevelSecurity.inject_into_cube_query(cube_query, self.user)
 
         try:
-            cube_resp = self.cube.execute(cube_query)
+            cube_resp = self.cube.load(cube_query)
         except Exception as exc:
             return {"success": False, "error": str(exc)}
 
-        data_rows = cube_resp.get("data", [])
+        data_rows = cube_resp.data
         insights = InsightEngine().generate(data_rows, saved_intent)
         visual_spec = VisualSpecGenerator().generate(data_rows, saved_intent)
 
