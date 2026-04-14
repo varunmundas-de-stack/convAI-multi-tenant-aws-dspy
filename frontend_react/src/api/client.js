@@ -146,6 +146,10 @@ export async function fetchDashboard(period = "last_30_days") {
   return apiClient.get(`/dashboard?period=${period}`)
 }
 
+export async function fetchDrilldown(drillType, value) {
+  return apiClient.get(`/dashboard/drilldown?type=${encodeURIComponent(drillType)}&value=${encodeURIComponent(value)}`)
+}
+
 // ── RLHF ─────────────────────────────────────────────────────────────────────
 export async function submitFeedback(payload) { return apiClient.post("/rlhf/feedback", payload) }
 
