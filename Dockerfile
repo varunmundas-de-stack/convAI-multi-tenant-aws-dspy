@@ -35,7 +35,8 @@ COPY database/ ./database/
 COPY cubejs/ ./cubejs/
 
 # Copy React build into the location FastAPI serves static files from
-COPY --from=frontend-builder /build/dist ./frontend/static/react/
+# Vite outDir is ../frontend/static/react (relative to frontend_react workdir)
+COPY --from=frontend-builder /frontend/static/react/ ./frontend/static/react/
 
 # Data directory (RLHF SQLite)
 RUN mkdir -p /app/data
