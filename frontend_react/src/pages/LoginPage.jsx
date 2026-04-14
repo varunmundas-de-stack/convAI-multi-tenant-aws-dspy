@@ -13,11 +13,13 @@ export default function LoginPage({ onLogin }) {
     setError('')
     setLoading(true)
     try {
-      const data = await loginUser(username, password)
-      if (data.success) onLogin(data.user)
-      else setError(data.error || 'Invalid credentials')
-    } catch {
-      setError('Network error. Please try again.')
+      // loginUser stores JWT tokens and returns the user object directly
+      const userData = await loginUser(username, password)
+      onLogin(userData)
+    } catch (err) {
+      setError(err.message === 'Invalid username or password'
+        ? 'Invalid username or password'
+        : 'Network error. Please try again.')
     } finally {
       setLoading(false)
     }

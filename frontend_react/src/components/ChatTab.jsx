@@ -34,7 +34,7 @@ const chipItem = {
   animate: { opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 20 } },
 }
 
-export default function ChatTab({ user, sessionId, onSessionCreated, prefillQuery, onPrefillConsumed }) {
+export default function ChatTab({ user, domain = 'cpg', sessionId, onSessionCreated, prefillQuery, onPrefillConsumed }) {
   const clientLabel = (user?.client_id || '').charAt(0).toUpperCase() + (user?.client_id || '').slice(1)
 
   const [messages, setMessages]       = useState([])
@@ -120,7 +120,7 @@ export default function ChatTab({ user, sessionId, onSessionCreated, prefillQuer
       const sid = await ensureSession(q)
       await saveMessage(sid, { role: 'user', content: q, title_hint: q }).catch(() => {})
 
-      const data = await sendQueryStream(q, (evt) => setProgressStep(evt))
+      const data = await sendQueryStream(q, (evt) => setProgressStep(evt), sid, domain)
 
       setProgressStep(null)
       const assistantMsg = {

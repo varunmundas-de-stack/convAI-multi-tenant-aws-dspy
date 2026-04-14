@@ -6,12 +6,14 @@ import InsightsTab from '../components/InsightsTab'
 import ChatTab from '../components/ChatTab'
 import DashboardTab from '../components/DashboardTab'
 import SessionSidebar from '../components/SessionSidebar'
+import RLHFTab from '../components/RLHFTab'
 import { fetchInsightCount, logoutUser } from '../api/client'
 
-const TABS = [
+const ALL_TABS = [
   { id: 'dashboard', label: 'Dashboard',     icon: '📊' },
   { id: 'insights',  label: 'Insights',       icon: '🎯' },
   { id: 'chat',      label: 'Ask your own Q', icon: '💬' },
+  { id: 'rlhf',      label: 'RLHF Admin',    icon: '🔬', adminOnly: true },
 ]
 
 const tabContentVariants = {
@@ -20,8 +22,9 @@ const tabContentVariants = {
   exit:    { opacity: 0, y: -8, transition: { duration: 0.15, ease: 'easeIn' } },
 }
 
-export default function DashboardPage({ user, onLogout }) {
+export default function DashboardPage({ user, domain, onDomainChange, onLogout }) {
   const navigate = useNavigate()
+  const TABS = ALL_TABS.filter(t => !t.adminOnly || user?.role === 'admin')
   const [activeTab, setActiveTab]             = useState('dashboard')
   const [unreadCount, setUnreadCount]         = useState(0)
   const [sidebarOpen, setSidebarOpen]         = useState(false)
@@ -69,6 +72,8 @@ export default function DashboardPage({ user, onLogout }) {
     <div className="flex flex-col h-screen" style={{ background: 'transparent' }}>
       <Header
         user={user}
+        domain={domain}
+        onDomainChange={onDomainChange}
         onLogout={handleLogout}
         onMenuToggle={() => setSidebarOpen(v => !v)}
       />
@@ -110,7 +115,7 @@ export default function DashboardPage({ user, onLogout }) {
             animate="animate"
             exit="exit"
           >
-            {activeTab === 'dashboard' && <DashboardTab user={user} />}
+            {activeTab === 'dashboard' && <DashboardTab user={user} domain={domain} />}
             {activeTab === 'insights'  && (
               <InsightsTab user={user} onBadgeRefresh={refreshBadge} onAskQuery={handleInsightQuery} />
             )}
@@ -118,12 +123,14 @@ export default function DashboardPage({ user, onLogout }) {
               <ChatTab
                 key={chatKey}
                 user={user}
+                domain={domain}
                 sessionId={activeSessionId}
                 onSessionCreated={setActiveSessionId}
                 prefillQuery={prefillQuery}
                 onPrefillConsumed={() => setPrefillQuery(null)}
               />
             )}
+            {activeTab === 'rlhf' && <RLHFTab user={user} />}
           </motion.div>
         </AnimatePresence>
       </div>

@@ -19,4 +19,7 @@ run_sql /app/database/migrations/003_rlhf_tables.sql
 echo "=== Seeding users ==="
 python /app/database/seed/seed_users.py
 
+echo "=== Seeding CPG sales data (may take ~2min) ==="
+python /app/database/seed/seed_data.py
+
 echo "=== Database initialisation complete ==="

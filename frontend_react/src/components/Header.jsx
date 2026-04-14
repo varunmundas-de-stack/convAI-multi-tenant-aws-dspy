@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import DomainSelector from './DomainSelector'
 
 const ROLE_CONFIG = {
   NSM:     { color: 'bg-purple-500/20 text-purple-200 border-purple-400/30', label: 'National' },
@@ -9,7 +10,7 @@ const ROLE_CONFIG = {
   analyst: { color: 'bg-sky-500/20 text-sky-200 border-sky-400/30', label: null },
 }
 
-export default function Header({ user, onLogout, onMenuToggle }) {
+export default function Header({ user, domain, onDomainChange, onLogout, onMenuToggle }) {
   const cfg         = ROLE_CONFIG[user?.role] || ROLE_CONFIG.admin
   const clientLabel = (user?.client_id || '').charAt(0).toUpperCase() + (user?.client_id || '').slice(1)
   const initials    = (user?.full_name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -85,6 +86,13 @@ export default function Header({ user, onLogout, onMenuToggle }) {
             </span>
           )}
         </motion.div>
+
+        {/* Domain selector */}
+        {onDomainChange && (
+          <div className="hidden sm:block flex-shrink-0">
+            <DomainSelector domain={domain} onChange={onDomainChange} />
+          </div>
+        )}
 
         {/* Sign out */}
         <button
