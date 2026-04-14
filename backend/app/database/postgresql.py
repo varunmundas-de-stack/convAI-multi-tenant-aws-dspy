@@ -20,12 +20,20 @@ _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 
 def init_pool() -> None:
     global _pool
+    # Use keyword args to avoid URL-parsing issues with special chars in password
     _pool = psycopg2.pool.ThreadedConnectionPool(
         minconn=2,
         maxconn=20,
-        dsn=settings.POSTGRES_DSN,
+        host=settings.POSTGRES_HOST,
+        port=settings.POSTGRES_PORT,
+        dbname=settings.POSTGRES_DB,
+        user=settings.POSTGRES_USER,
+        password=settings.POSTGRES_PASSWORD,
     )
-    logger.info("PostgreSQL connection pool initialised — DSN: %s", settings.POSTGRES_DSN)
+    logger.info(
+        "PostgreSQL connection pool initialised — %s:%s/%s",
+        settings.POSTGRES_HOST, settings.POSTGRES_PORT, settings.POSTGRES_DB,
+    )
 
 
 def close_pool() -> None:
