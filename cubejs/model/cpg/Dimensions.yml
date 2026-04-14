@@ -2,7 +2,7 @@
 
 cubes:
   - name: DimProduct
-    sql_table: "{{ COMPILE_CONTEXT.securityContext.schema }}.dim_product"
+    sql_table: "cpg_{{ COMPILE_CONTEXT.securityContext.clientId }}.dim_product"
     dimensions:
       - name: productKey
         sql: product_key
@@ -29,7 +29,7 @@ cubes:
         title: "Pack Size"
 
   - name: DimGeography
-    sql_table: "{{ COMPILE_CONTEXT.securityContext.schema }}.dim_geography"
+    sql_table: "cpg_{{ COMPILE_CONTEXT.securityContext.clientId }}.dim_geography"
     dimensions:
       - name: geographyKey
         sql: geography_key
@@ -53,7 +53,7 @@ cubes:
         title: "Town"
 
   - name: DimCustomer
-    sql_table: "{{ COMPILE_CONTEXT.securityContext.schema }}.dim_customer"
+    sql_table: "cpg_{{ COMPILE_CONTEXT.securityContext.clientId }}.dim_customer"
     dimensions:
       - name: customerKey
         sql: customer_key
@@ -73,7 +73,7 @@ cubes:
         title: "Outlet Type"
 
   - name: DimChannel
-    sql_table: "{{ COMPILE_CONTEXT.securityContext.schema }}.dim_channel"
+    sql_table: "cpg_{{ COMPILE_CONTEXT.securityContext.clientId }}.dim_channel"
     dimensions:
       - name: channelKey
         sql: channel_key
@@ -85,7 +85,7 @@ cubes:
         title: "Channel"
 
   - name: DimSalesHierarchy
-    sql_table: "{{ COMPILE_CONTEXT.securityContext.schema }}.dim_sales_hierarchy"
+    sql_table: "cpg_{{ COMPILE_CONTEXT.securityContext.clientId }}.dim_sales_hierarchy"
     dimensions:
       - name: hierarchyKey
         sql: hierarchy_key
@@ -117,7 +117,7 @@ cubes:
         title: "Region"
 
   - name: DimDate
-    sql_table: "{{ COMPILE_CONTEXT.securityContext.schema }}.dim_date"
+    sql_table: "cpg_{{ COMPILE_CONTEXT.securityContext.clientId }}.dim_date"
     dimensions:
       - name: dateKey
         sql: date_key

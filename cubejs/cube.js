@@ -1,13 +1,7 @@
 // Cube.js configuration — multi-tenant CPG + cold chain
-// Tenant isolation: schema prefix injected via COMPILE_CONTEXT in YAML models
+// Tenant schema isolation: cpg_{{ clientId }} prefix in YAML models via COMPILE_CONTEXT
 
 const { FileRepository } = require("@cubejs-backend/server-core");
-
-const SCHEMA_MAP = {
-  nestle: "cpg_nestle",
-  unilever: "cpg_unilever",
-  itc: "cpg_itc",
-};
 
 module.exports = {
   // PostgreSQL as the primary OLAP backend
@@ -19,16 +13,9 @@ module.exports = {
     return new FileRepository(`model/${domain}`);
   },
 
-  // Inject tenant schema into security context so YAML models can use it
-  extendContext: ({ securityContext }) => {
-    const clientId = securityContext?.clientId;
-    const schema = SCHEMA_MAP[clientId] || "public";
-    return {
-      securityContext: {
-        ...securityContext,
-        schema,
-      },
-    };
+  // Per-tenant cache key so Cube compiles separate schema per tenant
+  contextToAppId: ({ securityContext }) => {
+    return `APP_${securityContext?.clientId || "default"}`;
   },
 
   // Schema pre-aggregations cache
