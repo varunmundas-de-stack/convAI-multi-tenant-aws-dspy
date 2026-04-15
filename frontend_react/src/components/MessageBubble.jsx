@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import DataChart from './DataChart'
+import ChartRenderer from './ChartRenderer'
+import FeedbackBar from './FeedbackBar'
 
 const springTransition = { type: 'spring', stiffness: 300, damping: 28 }
 
@@ -36,7 +37,7 @@ function UserBubble({ text }) {
 }
 
 function AssistantBubble({ message }) {
-  const { data, error, isFirstAnswer } = message
+  const { data, error, isFirstAnswer, onRetry } = message
   const [copied, setCopied] = useState(false)
 
   // Confetti on first answer
@@ -52,9 +53,8 @@ function AssistantBubble({ message }) {
   }, [isFirstAnswer, data?.success])
 
   const handleCopy = () => {
-    const text = data?.response
-      ? data.response.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-      : ''
+    // Copy summary text from response or question
+    const text = data?.question || data?.response || ''
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -86,7 +86,18 @@ function AssistantBubble({ message }) {
   }
 
   if (!data) return null
-  const { success, response, raw_data, metadata, query_type } = data
+
+  // Support both new dspy backend format and legacy Flask format
+  // New: { success, request_id, question, data: rawRows, insights, visual_spec, execution_time_ms }
+  // Legacy: { success, response, raw_data, metadata, query_type }
+  const isNewFormat = 'visual_spec' in data || 'stage' in data
+  const rawRows = isNewFormat ? (data.data || []) : (data.raw_data || [])
+  const visual_spec = isNewFormat ? data.visual_spec : null
+  const refined_insights = isNewFormat ? (data.insights || null) : null
+  const responseHtml = isNewFormat ? null : data.response
+  const requestId = data.request_id || null
+  const question = data.question || ''
+  const execMs = isNewFormat ? data.execution_time_ms : data.metadata?.exec_time_ms
 
   return (
     <motion.div
@@ -107,54 +118,55 @@ function AssistantBubble({ message }) {
             boxShadow: '0 2px 16px rgba(99,102,241,0.07)',
           }}
         >
-          {/* Copy button — appears on hover */}
-          {data?.response && (
-            <motion.button
-              onClick={handleCopy}
-              title={copied ? 'Copied!' : 'Copy response'}
-              className="absolute top-2.5 right-2.5 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-              style={{
-                background: copied ? 'rgba(16,185,129,0.12)' : 'rgba(0,0,0,0.04)',
-                color: copied ? '#10b981' : '#9ca3af',
-              }}
-              whileTap={{ scale: 0.8 }}
-            >
-              {copied ? (
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              )}
-            </motion.button>
-          )}
-          {/* Natural summary for multi-row data */}
-          {raw_data?.length > 0 && query_type !== 'diagnostic' && (
-            <NaturalSummary data={raw_data} />
+          {/* Copy button */}
+          <motion.button
+            onClick={handleCopy}
+            title={copied ? 'Copied!' : 'Copy'}
+            className="absolute top-2.5 right-2.5 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+            style={{
+              background: copied ? 'rgba(16,185,129,0.12)' : 'rgba(0,0,0,0.04)',
+              color: copied ? '#10b981' : '#9ca3af',
+            }}
+            whileTap={{ scale: 0.8 }}
+          >
+            {copied ? (
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            )}
+          </motion.button>
+
+          {/* Natural summary banner */}
+          {rawRows.length > 0 && (
+            <NaturalSummary data={rawRows} />
           )}
 
-          {/* Main response HTML — overflow-x-auto ensures wide tables scroll on mobile */}
-          {response && (
+          {/* Legacy HTML response */}
+          {responseHtml && (
             <div className="overflow-x-auto">
               <div
                 className="text-sm text-gray-700 prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: success ? response : `<span class="text-red-600">${response}</span>` }}
+                dangerouslySetInnerHTML={{ __html: data.success ? responseHtml : `<span class="text-red-600">${responseHtml}</span>` }}
               />
             </div>
           )}
 
-          {/* Chart */}
-          {raw_data?.length >= 2 && query_type !== 'diagnostic' && (
-            <DataChart data={raw_data} />
+          {/* ChartRenderer — new format with visual_spec */}
+          {visual_spec && (
+            <div className="mt-2">
+              <ChartRenderer visual_spec={visual_spec} refined_insights={refined_insights} />
+            </div>
           )}
 
           {/* CSV export */}
-          {raw_data?.length > 0 && (
+          {rawRows.length > 0 && (
             <div className="mt-2">
               <button
-                onClick={() => downloadCSV(raw_data)}
+                onClick={() => downloadCSV(rawRows)}
                 className="text-xs text-gray-400 hover:text-emerald-600 flex items-center gap-1 transition-colors"
               >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,12 +178,22 @@ function AssistantBubble({ message }) {
             </div>
           )}
 
-
           {/* Metadata footer */}
-          {metadata && (
+          {execMs && (
             <p className="text-[10px] text-gray-300 mt-2 pt-2 border-t border-gray-100/80">
-              Intent: {metadata.intent} · Confidence: {((metadata.confidence || 0) * 100).toFixed(0)}% · {metadata.exec_time_ms?.toFixed(0)}ms
+              {execMs?.toFixed ? execMs.toFixed(0) : execMs}ms
             </p>
+          )}
+
+          {/* Inline RLHF feedback */}
+          {requestId && (
+            <FeedbackBar
+              requestId={requestId}
+              query={question}
+              responseSummary={JSON.stringify(refined_insights || {}).slice(0, 500)}
+              originalQuery={question}
+              onRetry={onRetry || null}
+            />
           )}
         </div>
         <p className="text-[10px] text-gray-300 ml-1">{timestamp()}</p>
@@ -182,9 +204,8 @@ function AssistantBubble({ message }) {
 
 function NaturalSummary({ data }) {
   if (!data?.length) return null
-  const cols  = Object.keys(data[0])
+  const cols = Object.keys(data[0])
   const count = data.length
-
   const numCols = cols.filter(c => typeof data[0][c] === 'number')
   const strCols = cols.filter(c => typeof data[0][c] === 'string')
 
@@ -196,7 +217,6 @@ function NaturalSummary({ data }) {
       })
 
   const dimCol = strCols[0] ?? numCols.find(c => c !== valCol) ?? null
-
   if (!valCol) return null
 
   const fmt = (n) => {
@@ -211,7 +231,6 @@ function NaturalSummary({ data }) {
 
   const dimVal = dimCol ? peakRow[dimCol] : null
   const numVal = peakRow[valCol]
-
   const label = dimVal == null ? null
     : typeof dimVal === 'number'
       ? `${dimCol.charAt(0).toUpperCase() + dimCol.slice(1)} ${dimVal}`
@@ -226,7 +245,7 @@ function NaturalSummary({ data }) {
     return (
       <div className="mb-2 px-3 py-2 rounded-xl text-sm" style={BANNER}>
         {label && <span className="text-gray-500">{label}: </span>}
-        <span className="font-black text-brand-600">{fmt(numVal)}</span>
+        <span className="font-black text-indigo-600">{fmt(numVal)}</span>
       </div>
     )
   }
@@ -235,8 +254,8 @@ function NaturalSummary({ data }) {
     <div className="mb-2 px-3 py-2 rounded-xl text-sm text-gray-600" style={BANNER}>
       Found <strong>{count}</strong> results
       {label
-        ? <> · Top: <strong>{label}</strong> — <span className="font-black text-brand-600">{fmt(numVal)}</span></>
-        : <> · Peak: <span className="font-black text-brand-600">{fmt(numVal)}</span></>
+        ? <> · Top: <strong>{label}</strong> — <span className="font-black text-indigo-600">{fmt(numVal)}</span></>
+        : <> · Peak: <span className="font-black text-indigo-600">{fmt(numVal)}</span></>
       }
     </div>
   )
@@ -282,7 +301,6 @@ function WelcomeCard({ name, client }) {
             Welcome to <span className="font-medium text-gray-700">{client} Analytics</span>. How can I help you today?
           </p>
         </div>
-
         <div className="px-4 pb-4 pt-3 text-xs space-y-2">
           <div className="px-3 py-2 rounded-lg" style={{ background: 'rgba(16,185,129,0.06)', borderLeft: '2px solid #10b981' }}>
             <p className="font-semibold text-gray-600 mb-1">You can ask about:</p>
@@ -290,7 +308,7 @@ function WelcomeCard({ name, client }) {
               <li>{client} sales, brands, SKUs and products</li>
               <li>Distribution channels and customer insights</li>
               <li>Time-based trends and performance metrics</li>
-              <li>Diagnostic analysis (e.g. why did sales change)</li>
+              <li>Drill down — e.g. "show by region", "break by brand"</li>
             </ul>
           </div>
           <div className="px-3 py-2 rounded-lg" style={{ background: 'rgba(244,63,94,0.05)', borderLeft: '2px solid #f43f5e' }}>
@@ -313,15 +331,15 @@ function timestamp() {
 function downloadCSV(data) {
   if (!data?.length) return
   const headers = Object.keys(data[0])
-  const escape  = (v) => {
+  const escape = (v) => {
     const s = String(v ?? '')
     return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
   }
   const rows = [headers.join(','), ...data.map(row => headers.map(h => escape(row[h])).join(','))]
   const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href     = url
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
   a.download = `cpg-export-${new Date().toISOString().slice(0, 10)}.csv`
   a.click()
   URL.revokeObjectURL(url)

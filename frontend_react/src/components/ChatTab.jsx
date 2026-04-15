@@ -104,6 +104,32 @@ export default function ChatTab({ user, domain = 'cpg', sessionId, onSessionCrea
     return s.session_id
   }
 
+  const handleRetry = async (modifiedQuery) => {
+    const q = modifiedQuery.trim()
+    if (!q || loading) return
+    setMessages(prev => [...prev, { id: `u-retry-${Date.now()}`, role: 'user', text: `↩ Retry: ${q}` }])
+    setLoading(true)
+    setFunMsgIdx(0)
+    setProgressStep({ step: 'intent', msg: '🔄 Re-running query…' })
+    try {
+      const sid = await ensureSession(q)
+      const data = await sendQueryStream(q, (evt) => setProgressStep(evt), sid, domain)
+      setProgressStep(null)
+      setMessages(prev => [...prev, {
+        id: `a-retry-${Date.now()}`,
+        role: 'assistant',
+        data,
+        isFirstAnswer: false,
+        onRetry: (mq) => handleRetry(mq),
+      }])
+    } catch {
+      setProgressStep(null)
+      setMessages(prev => [...prev, { id: `err-retry-${Date.now()}`, role: 'assistant', error: 'Retry failed — please try again.' }])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSend = async (directQuery = null) => {
     const q = directQuery ? directQuery.trim() : input.trim()
     if (!q || loading) return
@@ -128,6 +154,7 @@ export default function ChatTab({ user, domain = 'cpg', sessionId, onSessionCrea
         role: 'assistant',
         data,
         isFirstAnswer,
+        onRetry: (mq) => handleRetry(mq),
       }
       if (isFirstAnswer) hasConfettied.current = true
       setMessages(prev => [...prev, assistantMsg])
