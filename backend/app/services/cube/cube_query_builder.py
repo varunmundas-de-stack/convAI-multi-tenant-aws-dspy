@@ -280,6 +280,10 @@ def resolve_time_window(window: str) -> list[str]:
         start = today - timedelta(days=180)
         end = today
 
+    elif window == "last_365_days":
+        start = today - timedelta(days=365)
+        end = today
+
     elif window == "month_to_date":
         start = today.replace(day=1)
         end = today

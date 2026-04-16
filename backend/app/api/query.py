@@ -10,7 +10,8 @@ from typing import AsyncGenerator
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from typing import Any
 
 from app.core.dependencies import AuthUser
 from app.database.redis_client import (
@@ -27,20 +28,40 @@ router = APIRouter(prefix="/query", tags=["query"])
 
 class QueryRequest(BaseModel):
     question: str
-    session_id: str | None = None
+    session_id: Any = None
     domain: str = "cpg"
+
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def coerce_session_id(cls, v):
+        """Accept dict {session_id, title} from old frontend clients."""
+        if isinstance(v, dict):
+            return v.get("session_id") or None
+        return v or None
 
 
 class ClarifyRequest(BaseModel):
     request_id: str
     answers: dict
-    session_id: str | None = None
+    session_id: Any = None
+
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def coerce_session_id(cls, v):
+        if isinstance(v, dict): return v.get("session_id") or None
+        return v or None
 
 
 class RetryRequest(BaseModel):
     original_request_id: str
     modified_query: str
-    session_id: str | None = None
+    session_id: Any = None
+
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def coerce_session_id(cls, v):
+        if isinstance(v, dict): return v.get("session_id") or None
+        return v or None
 
 
 # ── Out-of-scope keyword check ────────────────────────────────────────────────

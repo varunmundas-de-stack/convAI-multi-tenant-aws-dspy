@@ -199,20 +199,29 @@ class IntentAdapter:
 
     def _map_window(self, window: str) -> str:
         mapping = {
-            "last_7_days":   "last 7 days",
-            "last_30_days":  "last 30 days",
-            "last_4_weeks":  "last 4 weeks",
-            "last_12_weeks": "last 12 weeks",
-            "this_month":    "this month",
-            "last_month":    "last month",
-            "this_quarter":  "this quarter",
-            "last_quarter":  "last quarter",
-            "this_year":     "this year",
-            "last_year":     "last year",
-            "ytd":           "year to date",
-            "mtd":           "month to date",
+            "last_7_days":    "last 7 days",
+            "last_14_days":   "last 14 days",
+            "last_28_days":   "last 28 days",
+            "last_30_days":   "last 30 days",
+            "last_60_days":   "last 60 days",
+            "last_90_days":   "last 90 days",
+            "last_120_days":  "last 120 days",
+            "last_180_days":  "last 180 days",
+            "last_365_days":  "last 365 days",
+            "last_4_weeks":   "last 4 weeks",
+            "last_12_weeks":  "last 12 weeks",
+            "this_month":     "this month",
+            "last_month":     "last month",
+            "this_quarter":   "this quarter",
+            "last_quarter":   "last quarter",
+            "this_year":      "this year",
+            "last_year":      "last year",
+            "ytd":            "year to date",
+            "mtd":            "month to date",
         }
-        return mapping.get(window, window)
+        # Fall back to replacing underscores with spaces so Cube.js can parse
+        # any window format the LLM produces (e.g. "last_365_days" -> "last 365 days")
+        return mapping.get(window, window.replace("_", " "))
 
     def _resolve_filters(self, intent: dict) -> list[dict]:
         raw = intent.get("filters") or []
