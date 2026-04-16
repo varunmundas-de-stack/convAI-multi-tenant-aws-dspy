@@ -90,7 +90,7 @@ function AssistantBubble({ message }) {
   // Support both new dspy backend format and legacy Flask format
   // New: { success, request_id, question, data: rawRows, insights, visual_spec, execution_time_ms }
   // Legacy: { success, response, raw_data, metadata, query_type }
-  const isNewFormat = 'visual_spec' in data || 'stage' in data
+  const isNewFormat = Array.isArray(data.data) || 'visual_spec' in data || 'stage' in data
   const rawRows = isNewFormat ? (data.data || []) : (data.raw_data || [])
   const visual_spec = isNewFormat ? data.visual_spec : null
   const refined_insights = isNewFormat ? (data.insights || null) : null

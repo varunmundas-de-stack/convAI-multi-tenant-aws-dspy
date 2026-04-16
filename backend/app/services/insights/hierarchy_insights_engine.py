@@ -56,15 +56,34 @@ class HierarchyInsightsEngine:
                 logger.error("Insights generation failed for %s: %s", client_id, exc)
         logger.info("Insights generation complete")
 
+    def _get_max_date(self, schema: str) -> str | None:
+        """Return the latest invoice_date in the schema, as a string."""
+        try:
+            rows = execute_query(f"SELECT MAX(invoice_date)::text AS max_date FROM {schema}.fact_secondary_sales")
+            if rows and rows[0].get("max_date"):
+                return rows[0]["max_date"]
+        except Exception:
+            pass
+        return None
+
     def _generate_for_tenant(self, client_id: str, domain: str) -> None:
         schema = _CPG_SCHEMAS.get(client_id)
         if not schema:
             return
 
+        # Anchor all date ranges to the most recent data date (avoids empty
+        # results when the dataset doesn't extend to today).
+        max_date = self._get_max_date(schema)
+        if not max_date:
+            logger.info("No data found for %s — skipping insights", client_id)
+            return
+        ref_date = f"'{max_date}'::date"
+
         insights = []
+        # Insights live until the next refresh cycle
         expires_at = datetime.now(timezone.utc) + timedelta(hours=settings.INSIGHTS_REFRESH_INTERVAL_HOURS * 2)
 
-        # ── NSM-level: national KPIs ────────────────────────────────────
+        # ── NSM-level: national KPIs (last 7 days of data) ─────────────
         try:
             rows = execute_query(
                 f"""
@@ -73,10 +92,10 @@ class HierarchyInsightsEngine:
                     COUNT(DISTINCT invoice_number) AS invoice_count,
                     ROUND(AVG(net_value)::numeric, 0) AS avg_invoice_value
                 FROM {schema}.fact_secondary_sales
-                WHERE invoice_date >= CURRENT_DATE - INTERVAL '7 days'
+                WHERE invoice_date >= {ref_date} - INTERVAL '7 days'
                 """
             )
-            if rows:
+            if rows and rows[0].get("invoice_count"):
                 r = rows[0]
                 insights.append({
                     "hierarchy_level": "NSM",
@@ -93,14 +112,14 @@ class HierarchyInsightsEngine:
         except Exception as exc:
             logger.debug("NSM insight query failed for %s: %s", client_id, exc)
 
-        # ── NSM-level: top zone by revenue ──────────────────────────────
+        # ── NSM-level: top zone by revenue (last 30 days of data) ───────
         try:
             rows = execute_query(
                 f"""
                 SELECT sh.zone_name, ROUND(SUM(fs.net_value)::numeric / 1e6, 2) AS sales_m
                 FROM {schema}.fact_secondary_sales fs
                 JOIN {schema}.dim_sales_hierarchy sh ON sh.hierarchy_key = fs.sales_hierarchy_key
-                WHERE fs.invoice_date >= CURRENT_DATE - INTERVAL '30 days'
+                WHERE fs.invoice_date >= {ref_date} - INTERVAL '30 days'
                 GROUP BY sh.zone_name
                 ORDER BY sales_m DESC
                 LIMIT 1
@@ -114,19 +133,45 @@ class HierarchyInsightsEngine:
                     "description": f"Zone '{r.get('zone_name')}' led with ₹{r.get('sales_m', 0)}M in secondary sales.",
                     "insight_type": "trend",
                     "priority": 2,
-                    "suggested_query": f"Show sales by zone last 30 days",
+                    "suggested_query": "Show sales by zone last 30 days",
                 })
         except Exception as exc:
             logger.debug("Top zone insight failed for %s: %s", client_id, exc)
 
-        # ── ZSM-level: zone-level WoW ────────────────────────────────────
+        # ── NSM-level: top brand last 30 days ───────────────────────────
+        try:
+            rows = execute_query(
+                f"""
+                SELECT p.brand_name, ROUND(SUM(fs.net_value)::numeric / 1e6, 2) AS sales_m
+                FROM {schema}.fact_secondary_sales fs
+                JOIN {schema}.dim_product p ON p.product_key = fs.product_key
+                WHERE fs.invoice_date >= {ref_date} - INTERVAL '30 days'
+                GROUP BY p.brand_name
+                ORDER BY sales_m DESC
+                LIMIT 1
+                """
+            )
+            if rows:
+                r = rows[0]
+                insights.append({
+                    "hierarchy_level": "NSM",
+                    "title": "Top Brand Last 30 Days",
+                    "description": f"Brand '{r.get('brand_name')}' led with ₹{r.get('sales_m', 0)}M in secondary sales.",
+                    "insight_type": "snapshot",
+                    "priority": 2,
+                    "suggested_query": "Show top brands by revenue",
+                })
+        except Exception as exc:
+            logger.debug("Top brand insight failed for %s: %s", client_id, exc)
+
+        # ── ZSM-level: week-on-week trend ────────────────────────────────
         try:
             rows = execute_query(
                 f"""
                 SELECT
-                    ROUND(SUM(CASE WHEN invoice_date >= CURRENT_DATE - INTERVAL '7 days' THEN net_value ELSE 0 END)::numeric/1e6, 2) AS this_week,
-                    ROUND(SUM(CASE WHEN invoice_date >= CURRENT_DATE - INTERVAL '14 days'
-                                    AND invoice_date < CURRENT_DATE - INTERVAL '7 days' THEN net_value ELSE 0 END)::numeric/1e6, 2) AS last_week
+                    ROUND(SUM(CASE WHEN invoice_date >= {ref_date} - INTERVAL '7 days' THEN net_value ELSE 0 END)::numeric/1e6, 2) AS this_week,
+                    ROUND(SUM(CASE WHEN invoice_date >= {ref_date} - INTERVAL '14 days'
+                                    AND invoice_date < {ref_date} - INTERVAL '7 days' THEN net_value ELSE 0 END)::numeric/1e6, 2) AS last_week
                 FROM {schema}.fact_secondary_sales
                 """
             )
@@ -148,6 +193,34 @@ class HierarchyInsightsEngine:
                     })
         except Exception as exc:
             logger.debug("WoW insight failed for %s: %s", client_id, exc)
+
+        # ── ASM-level: channel mix last 30 days ─────────────────────────
+        try:
+            rows = execute_query(
+                f"""
+                SELECT ch.channel_name,
+                       ROUND(SUM(fs.net_value)::numeric / 1e6, 2) AS sales_m,
+                       ROUND(100.0 * SUM(fs.net_value) / NULLIF(SUM(SUM(fs.net_value)) OVER (), 0), 1) AS pct
+                FROM {schema}.fact_secondary_sales fs
+                JOIN {schema}.dim_channel ch ON ch.channel_key = fs.channel_key
+                WHERE fs.invoice_date >= {ref_date} - INTERVAL '30 days'
+                GROUP BY ch.channel_name
+                ORDER BY sales_m DESC
+                LIMIT 1
+                """
+            )
+            if rows:
+                r = rows[0]
+                insights.append({
+                    "hierarchy_level": "ASM",
+                    "title": "Top Channel Last 30 Days",
+                    "description": f"Channel '{r.get('channel_name')}' accounts for {r.get('pct', 0)}% of sales (₹{r.get('sales_m', 0)}M).",
+                    "insight_type": "snapshot",
+                    "priority": 2,
+                    "suggested_query": "Show sales by channel",
+                })
+        except Exception as exc:
+            logger.debug("Channel insight failed for %s: %s", client_id, exc)
 
         # ── Write insights to DB ─────────────────────────────────────────
         for ins in insights:

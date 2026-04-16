@@ -57,10 +57,9 @@ export default function DashboardPage({ user, domain, onDomainChange, onLogout }
   }
 
   const handleNewSession = (sessionId) => {
+    // Do NOT increment chatKey here — this is called auto-create during an active
+    // stream (onSessionCreated). Remounting mid-stream kills the response.
     setActiveSessionId(sessionId)
-    setChatKey(k => k + 1)   // explicit new chat → remount ChatTab
-    setActiveTab('chat')
-    setPrefillQuery(null)
   }
 
   const handleSelectSession = (sessionId) => {

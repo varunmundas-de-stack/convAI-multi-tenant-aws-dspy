@@ -166,12 +166,13 @@ export default function ChatTab({ user, domain = 'cpg', sessionId, onSessionCrea
         query_type: data.query_type || null,
         metadata:   data.metadata   ? JSON.stringify(data.metadata)   : null,
       }).catch(() => {})
-    } catch {
+    } catch (e) {
+      console.error('[ChatTab] query failed:', e)
       setProgressStep(null)
       setMessages(prev => [...prev, {
         id:    `err-${Date.now()}`,
         role:  'assistant',
-        error: 'Connection error — please try again.',
+        error: e?.message || 'Connection error — please try again.',
       }])
     } finally {
       setLoading(false)
