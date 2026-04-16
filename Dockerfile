@@ -1,21 +1,8 @@
-# Multi-stage Dockerfile
-# Stage 1: Build React frontend
-# Stage 2: FastAPI backend serving React static files + API
+# Dockerfile — FastAPI backend serving pre-built React static files
+# The React bundle is built locally (npm run build in frontend_react/) and
+# committed to frontend/static/react/ so Docker just COPYs it in.
+# This avoids stale Docker layer-cache issues with multi-stage npm builds.
 
-# ── Stage 1: React build ──────────────────────────────────────────────────────
-FROM node:20-alpine AS frontend-builder
-
-WORKDIR /build
-
-COPY frontend_react/package*.json ./
-RUN npm ci --silent
-
-COPY frontend_react/ ./
-# Inject API base URL (empty = same origin, handled by Nginx proxy)
-ENV VITE_API_BASE_URL=""
-RUN npm run build
-
-# ── Stage 2: FastAPI app ──────────────────────────────────────────────────────
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -34,9 +21,8 @@ COPY backend/ ./backend/
 COPY database/ ./database/
 COPY cubejs/ ./cubejs/
 
-# Copy React build into the location FastAPI serves static files from
-# Vite outDir is ../frontend/static/react (relative to frontend_react workdir)
-COPY --from=frontend-builder /frontend/static/react/ ./frontend/static/react/
+# Pre-built React bundle (built locally, committed to git)
+COPY frontend/static/react/ ./frontend/static/react/
 
 # Data directory (RLHF SQLite)
 RUN mkdir -p /app/data
