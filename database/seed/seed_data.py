@@ -19,7 +19,7 @@ POSTGRES_DSN = os.getenv(
 )
 
 START_DATE = date(2025, 1, 1)
-END_DATE   = date(2026, 2, 28)
+END_DATE   = date(2026, 4, 16)
 
 random.seed(42)
 
