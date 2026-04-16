@@ -158,8 +158,21 @@ export async function fetchSessions() {
   // Session persistence via Redis QCO — no server-side session list yet
   return []
 }
+
+// crypto.randomUUID() requires a secure context (HTTPS) in some browsers.
+// Use a Math.random fallback so session IDs always generate on plain HTTP.
+function makeUUID() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try { return crypto.randomUUID() } catch { /* fall through */ }
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 export async function createSession(title = "New conversation") {
-  return { session_id: crypto.randomUUID(), title }
+  return { session_id: makeUUID(), title }
 }
 export async function fetchSessionMessages() { return [] }
 export async function saveMessage() { return {} }

@@ -136,7 +136,12 @@ if _STATIC_DIR.exists():
         """Catch-all for React client-side routing."""
         index = _STATIC_DIR / "index.html"
         if index.exists():
-            return FileResponse(str(index))
+            # Never cache index.html — bundle filenames are content-hashed so
+            # a stale index.html pointing at an old bundle hash causes a silent 404.
+            return FileResponse(
+                str(index),
+                headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+            )
         return {"error": "Frontend not built"}
 else:
     logger.warning("React static files not found at %s — serving API only", _STATIC_DIR)
