@@ -63,6 +63,9 @@ services:
         condition: service_healthy
 
   app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
     image: cpg-dspy-app:latest
     container_name: cpg_dspy_app
     restart: unless-stopped
